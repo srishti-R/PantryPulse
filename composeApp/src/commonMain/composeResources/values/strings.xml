@@ -1,0 +1,4 @@
+<resources>
+    <string name="checkbox_selected_text">We'll notify you when you near a shop selling this category</string>
+    <string name="checkbox_unselected_text">Remind me to refill it when I'm out.</string>
+</resources>
