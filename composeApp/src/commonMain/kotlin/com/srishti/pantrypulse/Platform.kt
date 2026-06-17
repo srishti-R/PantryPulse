@@ -1,4 +1,4 @@
-package com.srishti.pantrypulse.model
+package com.srishti.pantrypulse
 
 interface Platform {
     val name: String

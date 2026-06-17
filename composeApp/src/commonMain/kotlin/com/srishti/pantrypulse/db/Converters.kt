@@ -1,21 +1,33 @@
-package com.srishti.pantrypulse.db
 
 import androidx.room.TypeConverter
-import com.srishti.pantrypulse.model.Category
 import kotlinx.datetime.LocalDate
 
+/**
+ * Robust TypeConverters indicating how Room database should save complex enum classes and LocalDateTime
+ * objects into normal persistent SQL types.
+ */
 class Converters {
-    // For LocalDate
     @TypeConverter
-    fun fromLocalDate(value: LocalDate?): String? = value?.toString()
+    fun fromCategory(category: Category): String {
+        return category.name
+    }
 
     @TypeConverter
-    fun toLocalDate(value: String?): LocalDate? = value?.let { LocalDate.parse(it) }
+    fun toCategory(value: String): Category {
+        return try {
+            Category.valueOf(value)
+        } catch (e: IllegalArgumentException) {
+            Category.NA
+        }
+    }
 
-    // For Category (assuming it's an Enum)
     @TypeConverter
-    fun fromCategory(value: Category): String = value.name
+    fun fromLocalDate(date: LocalDate?): String? {
+        return date?.toString()
+    }
 
     @TypeConverter
-    fun toCategory(value: String): Category = Category.valueOf(value)
+    fun toLocalDate(value: String?): LocalDate? {
+        return value?.let { LocalDate.parse(it) }
+    }
 }

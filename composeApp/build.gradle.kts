@@ -35,6 +35,13 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.room.sqlite.wrapper)
+            implementation(libs.ml.kit)
+            implementation(libs.camerax.lifecycle)
+            implementation(libs.camerax.view)
+            implementation(libs.camerax.camera2)
+            implementation(libs.camerax.core)
+            implementation(libs.concurrent.future)
+            implementation(libs.concurrent.ktx)
 //            implementation(libs.room)
 //            implementation(libs.roomKtx)
 
@@ -55,6 +62,7 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.material.icons.extended)
             implementation(libs.navigation.compose)
+            implementation(libs.firebase.ai.kmp)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

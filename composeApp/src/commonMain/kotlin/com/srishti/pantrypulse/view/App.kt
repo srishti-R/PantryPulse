@@ -1,4 +1,3 @@
-package com.srishti.pantrypulse.view
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -12,17 +11,20 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.room.RoomDatabase
+import com.srishti.pantrypulse.db.PantryDatabase
 import com.srishti.pantrypulse.model.Graph
 import com.srishti.pantrypulse.model.NavigationItem
 import com.srishti.pantrypulse.model.Routes
-import com.srishti.pantrypulse.db.PantryDatabase
 import com.srishti.pantrypulse.model.navigationItemsLists
+import com.srishti.pantrypulse.view.BottomNavigationBar
 
 @Composable
 @Preview
@@ -30,17 +32,16 @@ fun App(
     databaseBuilder: RoomDatabase.Builder<PantryDatabase>
 ) {
     MaterialTheme {
-        // Building the database
         val database = remember { databaseBuilder.build() }
 
-        // Creating UserDao instance and passing in other screens
-        val pantryDao = remember { database.getDao() }
-        MainScreen()
+        val pantryDao =  database.getDao()
+
+        MainScreen(pantryDao = pantryDao)
     }
 }
 
 @Composable
-fun MainScreen() {
+fun MainScreen(pantryDao: PantryDao) {
     val rootNavController = rememberNavController()
     val navBackStackEntry by rootNavController.currentBackStackEntryAsState()
     val currentRoute by remember(navBackStackEntry) {
@@ -55,9 +56,9 @@ fun MainScreen() {
     }
     val isBottomBarVisible by remember {
         derivedStateOf {
-                navigationItem != null
-            }
+            navigationItem != null
         }
+    }
 
     MainScaffold(
         rootNavController = rootNavController,
@@ -71,7 +72,8 @@ fun MainScreen() {
                 launchSingleTop = true
                 restoreState = true
             }
-        }
+        },
+        pantryDao = pantryDao
     )
 }
 
@@ -81,6 +83,7 @@ fun MainScaffold(
     currentRoute: String?,
     isBottomBarVisible: Boolean,
     onItemClick: (NavigationItem) -> Unit,
+    pantryDao: PantryDao
 ) {
     Row {
         Scaffold(
@@ -88,11 +91,9 @@ fun MainScaffold(
                 AnimatedVisibility(
                     visible = isBottomBarVisible,
                     enter = slideInVertically(
-                        // Slide in from the bottom
                         initialOffsetY = { fullHeight -> fullHeight }
                     ),
                     exit = slideOutVertically(
-                        // Slide out to the bottom
                         targetOffsetY = { fullHeight -> fullHeight }
                     )
                 ) {
@@ -109,6 +110,7 @@ fun MainScaffold(
             RootNavGraph(
                 rootNavController = rootNavController,
                 innerPadding = innerPadding,
+                pantryDao = pantryDao
             )
         }
     }
@@ -117,21 +119,36 @@ fun MainScaffold(
 @Composable
 fun RootNavGraph(
     rootNavController: NavHostController,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    pantryDao: PantryDao
 ) {
     NavHost(
         navController = rootNavController,
         startDestination = Graph.NAVIGATION_BAR_SCREEN_GRAPH,
     ) {
-        composable(
-            route = Routes.Add.route,
-        ) {
-            AddItemScreenStateful(rootNavController = rootNavController)
+        mainNavGraph(rootNavController = rootNavController, pantryDao = pantryDao, innerPadding = innerPadding)
+    }
+}
+
+fun NavGraphBuilder.mainNavGraph(
+    rootNavController: NavHostController,
+    pantryDao: PantryDao,
+    innerPadding: PaddingValues
+) {
+    navigation(
+        startDestination = Routes.Add.route,
+        route = Graph.NAVIGATION_BAR_SCREEN_GRAPH
+    ) {
+        composable(route = Routes.Add.route) {
+            AddItemScreen(
+                pantryDao = pantryDao
+            )
         }
-        composable(
-            route = Routes.List.route,
-        ) {
-            PantryListScreen(rootNavController = rootNavController)
+        composable(route = Routes.List.route) {
+            PantryListScreen(
+                rootNavController = rootNavController,
+                pantryDao = pantryDao
+            )
         }
     }
 }

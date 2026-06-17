@@ -1,17 +1,16 @@
-package com.srishti.pantrypulse.model
-
-enum class Category {
-    DRY_GOODS("Dry Goods"),
+/**
+ * Solid Material 3 Multiplatform Enum mapping food categories with human-readable displayName strings
+ * for elegant cross-platform database filtering.
+ */
+enum class Category(val displayName: String) {
     DAIRY("Dairy"),
-    FAST_CONSUMABLE("Fast Consumable"),
-    HOUSEHOLD("Household"),
-    PETS("Pets"),
+    FRUITS_VEG("Fruits & Vegetables"),
+    BAKERY("Bakery & Bread"),
+    MEAT_SEAFOOD("Meat & Seafood"),
+    PANTRY("Pantry Essentials"),
     BEVERAGES("Beverages"),
-    SWEETS_DAIRY("Dairy Sweets"),
-    SWEETS_OTHERS("Sweets"),
-    OIL("Oils"),
-    GROCERY("Grocery"),
-    NA("None");
-
-    constructor(name:String)
+    FROZEN("Frozen Foods"),
+    SNACKS("Snacks"),
+    OTHER("Other"),
+    NA("N/A");
 }

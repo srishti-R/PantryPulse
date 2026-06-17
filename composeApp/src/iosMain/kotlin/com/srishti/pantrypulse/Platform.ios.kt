@@ -1,6 +1,5 @@
 package com.srishti.pantrypulse
 
-import com.srishti.pantrypulse.model.Platform
 import platform.UIKit.UIDevice
 
 class IOSPlatform: Platform {

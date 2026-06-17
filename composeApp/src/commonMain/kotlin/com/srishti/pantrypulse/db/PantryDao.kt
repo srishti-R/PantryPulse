@@ -1,18 +1,23 @@
-package com.srishti.pantrypulse.db
-
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
+import com.srishti.pantrypulse.db.PantryItem
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PantryDao {
-    @Insert
-    suspend fun insert(item: PantryItem)
-
-    @Query("SELECT count(*) FROM pantry_items")
-    suspend fun count(): Int
-
     @Query("SELECT * FROM pantry_items")
-    fun getAllAsFlow(): Flow<List<PantryItem>>
+    fun getAllItemsFlow(): Flow<List<PantryItem>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertItem(item: PantryItem)
+
+    @Update
+    suspend fun updateItem(item: PantryItem)
+
+    @Delete
+    suspend fun deleteItem(item: PantryItem)
 }

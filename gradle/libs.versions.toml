@@ -15,9 +15,13 @@ kotlin = "2.3.0"
 material3 = "1.10.0-alpha05"
 room = "2.8.4"
 sqlite = "2.6.2"
-kotlinx-datetime = "0.6.0"
+kotlinx-datetime = "0.7.1"
 iconsExtended = "1.7.3"
 navigationCompose = "2.9.1"
+ml-kit = "16.0.1"
+camerax_version = "1.6.0-beta02"
+concurrent-future = "1.2.0"
+firebase-ai-kmp = "0.4.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -44,7 +48,14 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 androidx-room-sqlite-wrapper = { module = "androidx.room:room-sqlite-wrapper", version.ref = "room" }
 compose-material-icons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "iconsExtended" }
 navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-
+ml-kit = {module = "com.google.mlkit:text-recognition", version.ref = "ml-kit"}
+camerax-camera2 = {module = "androidx.camera:camera-camera2", version.ref = "camerax_version"}
+camerax-lifecycle = {module = "androidx.camera:camera-lifecycle", version.ref = "camerax_version"}
+camerax-view = {module = "androidx.camera:camera-view", version.ref = "camerax_version"}
+camerax-core = {module = "androidx.camera:camera-core", version.ref = "camerax_version"}
+concurrent-future = {module = "androidx.concurrent:concurrent-futures", version.ref = "concurrent-future"}
+concurrent-ktx = {module = "androidx.concurrent:concurrent-futures-ktx", version.ref = "concurrent-future"}
+firebase-ai-kmp = { module = "io.github.seanchinjunkai:firebase-ai-kmp", version.ref = "firebase-ai-kmp"}
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
