@@ -70,7 +70,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.srishti.pantrypulse.db.PantryItem
 import kotlinx.coroutines.launch
 import kotlinx.datetime.TimeZone
@@ -81,7 +80,6 @@ import kotlin.time.Clock
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PantryListScreen(
-    rootNavController: NavController,
     pantryDao: PantryDao
 ) {
     val coroutineScope = rememberCoroutineScope()

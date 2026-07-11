@@ -42,8 +42,7 @@ kotlin {
             implementation(libs.camerax.core)
             implementation(libs.concurrent.future)
             implementation(libs.concurrent.ktx)
-//            implementation(libs.room)
-//            implementation(libs.roomKtx)
+            api("com.google.guava:guava:31.1-android")
 
 
         }

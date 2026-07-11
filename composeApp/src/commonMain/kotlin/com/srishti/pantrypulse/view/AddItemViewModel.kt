@@ -4,15 +4,19 @@ import PantryDao
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.srishti.pantrypulse.db.PantryItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 
 class AddItemViewModel: ViewModel() {
 
     fun addPantryItem(pantryItem: PantryItem, dao: PantryDao) {
        viewModelScope.launch {
-           dao.insertItem(
-               pantryItem
-           )
+           with(Dispatchers.IO) {
+               dao.insertItem(
+                   pantryItem
+               )
+           }
        }
     }
 

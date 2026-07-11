@@ -2,7 +2,6 @@
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -106,10 +105,9 @@ fun MainScaffold(
                     )
                 }
             }
-        ) { innerPadding ->
+        ) { _ ->
             RootNavGraph(
                 rootNavController = rootNavController,
-                innerPadding = innerPadding,
                 pantryDao = pantryDao
             )
         }
@@ -119,21 +117,18 @@ fun MainScaffold(
 @Composable
 fun RootNavGraph(
     rootNavController: NavHostController,
-    innerPadding: PaddingValues,
     pantryDao: PantryDao
 ) {
     NavHost(
         navController = rootNavController,
         startDestination = Graph.NAVIGATION_BAR_SCREEN_GRAPH,
     ) {
-        mainNavGraph(rootNavController = rootNavController, pantryDao = pantryDao, innerPadding = innerPadding)
+        mainNavGraph(pantryDao = pantryDao)
     }
 }
 
 fun NavGraphBuilder.mainNavGraph(
-    rootNavController: NavHostController,
     pantryDao: PantryDao,
-    innerPadding: PaddingValues
 ) {
     navigation(
         startDestination = Routes.Add.route,
@@ -146,7 +141,6 @@ fun NavGraphBuilder.mainNavGraph(
         }
         composable(route = Routes.List.route) {
             PantryListScreen(
-                rootNavController = rootNavController,
                 pantryDao = pantryDao
             )
         }

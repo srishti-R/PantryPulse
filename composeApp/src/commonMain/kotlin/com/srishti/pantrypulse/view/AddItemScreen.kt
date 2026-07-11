@@ -53,27 +53,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.srishti.pantrypulse.CameraScanner
+import com.srishti.pantrypulse.Utilities
 import com.srishti.pantrypulse.db.PantryItem
 import com.srishti.pantrypulse.view.AddItemViewModel
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.todayIn
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AddItemScreen(
-    pantryDao: PantryDao
+    pantryDao: PantryDao,
+    viewModel: AddItemViewModel = viewModel()
 ) {
     val scrollState = rememberScrollState()
-    val addItemViewModel: AddItemViewModel = viewModel()
 
     var productName by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(Category.NA) }
     var expiryDate by remember { mutableStateOf<LocalDate?>(null) }
     var buyDate by remember { mutableStateOf<LocalDate?>(null) }
     var showScanner by remember { mutableStateOf(false) }
+    var scannerMode by remember { mutableStateOf("productName") }
 
     var showPicker by remember { mutableStateOf(false) }
     var pickingForExpiry by remember { mutableStateOf(true) }
@@ -94,7 +100,7 @@ fun AddItemScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(20.dp),
+            .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // PRODUCT NAME INPUT
@@ -105,7 +111,10 @@ fun AddItemScreen(
             placeholder = { Text("Enter milk, cereal, fruit...") },
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
-                IconButton(onClick = { showScanner = true }) {
+                IconButton(onClick = {
+                    scannerMode = "productName"
+                    showScanner = true
+                }) {
                     Icon(
                         imageVector = Icons.Default.DocumentScanner,
                         contentDescription = "Scan with Camera"
@@ -115,10 +124,10 @@ fun AddItemScreen(
         )
 
         // CATEGORY CHIPS
-        Text("Select Category", style = MaterialTheme.typography.titleMedium)
+        Text("Category", style = MaterialTheme.typography.labelLarge)
 
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Category.entries.forEach { category ->
@@ -139,13 +148,12 @@ fun AddItemScreen(
                 showPicker = true
             },
             onCameraClick = {
+                scannerMode = "expiryDate"
                 showScanner = true
             },
-            onVoiceTranscribed = { transcribedProduct, targetDate, detectedCategory ->
-                // Smart voice callback
-                if (transcribedProduct.isNotBlank()) productName = transcribedProduct
+            onVoiceTranscribed = { _, targetDate, _ ->
+                // Smart voice callback: isolate change to expiry date specifically
                 expiryDate = targetDate
-                if (detectedCategory != null) selectedCategory = detectedCategory
             }
         )
 
@@ -158,6 +166,7 @@ fun AddItemScreen(
                 showPicker = true
             },
             onCameraClick = {
+                scannerMode = "buyDate"
                 showScanner = true
             },
             onVoiceTranscribed = { transcribedProduct, targetDate, _ ->
@@ -193,16 +202,18 @@ fun AddItemScreen(
         Button(
             onClick = {
                 if (productName.isNotBlank()) {
-                    addItemViewModel.addPantryItem(
-                        PantryItem(
-                            name = productName,
-                            category = selectedCategory,
-                            expiryDate = expiryDate,
-                            buyDate = buyDate,
-                            isRemindEnabled = isGeofenceAlertEnabled
-                        ),
-                        pantryDao
+                    val resolvedBuyDate = buyDate ?: Clock.System.todayIn(TimeZone.currentSystemDefault())
+
+                    val finalExpiryDate = expiryDate ?: resolvedBuyDate.plus(DatePeriod(days = Utilities.getDefaultExpiryDays(selectedCategory)))
+                    val itemToSave = PantryItem(
+                        name = productName,
+                        category = selectedCategory,
+                        expiryDate = finalExpiryDate,
+                        buyDate = resolvedBuyDate,
+                        isRemindEnabled = isGeofenceAlertEnabled
                     )
+
+                    viewModel.addPantryItem(itemToSave, pantryDao)
                     // Reset fields
                     productName = ""
                     expiryDate = null
@@ -222,10 +233,16 @@ fun AddItemScreen(
 
     if (showScanner) {
         ScannerOverlay(
-            onDateDetected = { detectedDate, detectedName, categoryName ->
-                expiryDate = detectedDate
-                if (detectedName.isNotBlank()) productName = detectedName
-                if (categoryName != null) selectedCategory = categoryName
+            mode = scannerMode,
+            onDateDetected = { detectedExpiryDate, detectedBuyDate, detectedName, detectedCategory ->
+                if (scannerMode == "productName") {
+                    if (detectedName.isNotBlank()) productName = detectedName
+                    if (detectedCategory != null) selectedCategory = detectedCategory
+                } else if (scannerMode == "expiryDate") {
+                    expiryDate = detectedExpiryDate
+                } else if (scannerMode == "buyDate") {
+                    buyDate = detectedBuyDate
+                }
                 showScanner = false
             },
             onClose = { showScanner = false }
@@ -270,10 +287,7 @@ fun DateFieldTrailingIcons(
     onCalendarClick: () -> Unit = {},
     onCameraClick: () -> Unit = {}
 ) {
-    Row(
-//        horizontalArrangement = Arrangement.spacedBy(2.dp),
-//        modifier = Modifier.padding(end = 4.dp)
-    ) {
+    Row {
         IconButton(onClick = onCalendarClick) {
             Icon(Icons.Default.DateRange, contentDescription = "Pick Date")
         }
@@ -286,12 +300,11 @@ fun DateFieldTrailingIcons(
     }
 }
 
-/**
- * Beautiful Overlay Dialog supporting custom guide grids for barcode scanning representation.
- */
+
 @Composable
 fun ScannerOverlay(
-    onDateDetected: (LocalDate?, String, Category?) -> Unit,
+    mode: String = "productName",
+    onDateDetected: (LocalDate?, LocalDate?, String, Category?) -> Unit,
     onClose: () -> Unit
 ) {
     Dialog(
@@ -299,120 +312,119 @@ fun ScannerOverlay(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.85f))
+            modifier = Modifier.fillMaxSize()
         ) {
-            Column(
+            // Live Camera Scanner Engine (Actual use-case in background)
+            CameraScanner(
+                onDateDetected = onDateDetected,
+                onClose = onClose,
+                modifier = Modifier.fillMaxSize(),
+                mode = mode
+            )
+
+            // Semi-transparent scrim to dim the background camera feed for UI readability
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
-                    }
-                    Text(
-                        text = "Smart OCR Camera Scan overlay",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(48.dp))
-                }
+                    .background(Color.Black.copy(alpha = 0.45f))
+            )
 
+            // Top Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(24.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                }
+                Text(
+                    text = when (mode) {
+                        "productName" -> "Product Name OCR Scanner"
+                        "expiryDate" -> "Expiration Date OCR Scanner"
+                        else -> "Purchase/MFG Date OCR Scanner"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.width(48.dp))
+            }
+
+            // Viewfinder Target Frame perfectly center aligned
+            Box(
+                modifier = Modifier
+                    .size(width = 280.dp, height = 200.dp)
+                    .align(Alignment.Center)
+                    .drawWithContent {
+                        drawContent()
+                        val cornerLength = 24.dp.toPx()
+                        val strokeWidth = 3.dp.toPx()
+                        val color = Color(0xFF6366F1)
+
+                        // Top Left corners
+                        drawRect(color = color, topLeft = Offset(0f, 0f), size = Size(cornerLength, strokeWidth))
+                        drawRect(color = color, topLeft = Offset(0f, 0f), size = Size(strokeWidth, cornerLength))
+                        // Top Right corners
+                        drawRect(color = color, topLeft = Offset(size.width - cornerLength, 0f), size = Size(cornerLength, strokeWidth))
+                        drawRect(color = color, topLeft = Offset(size.width - strokeWidth, 0f), size = Size(strokeWidth, cornerLength))
+                        // Bottom Left corners
+                        drawRect(color = color, topLeft = Offset(0f, size.height - strokeWidth), size = Size(cornerLength, strokeWidth))
+                        drawRect(color = color, topLeft = Offset(0f, size.height - cornerLength), size = Size(strokeWidth, cornerLength))
+                        // Bottom Right corners
+                        drawRect(color = color, topLeft = Offset(size.width - cornerLength, size.height - strokeWidth), size = Size(cornerLength, strokeWidth))
+                        drawRect(color = color, topLeft = Offset(size.width - strokeWidth, size.height - cornerLength), size = Size(strokeWidth, cornerLength))
+                    },
+                contentAlignment = Alignment.Center
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(width = 280.dp, height = 200.dp)
-                        .drawWithContent {
-                            drawContent()
-                            val cornerLength = 24.dp.toPx()
-                            val strokeWidth = 3.dp.toPx()
-                            val color = Color(0xFF6366F1)
+                        .fillMaxWidth(0.9f)
+                        .height(2.dp)
+                        .background(Color.Red)
+                )
+                Text(
+                    text = when (mode) {
+                        "productName" -> "Align product label within frame"
+                        "expiryDate" -> "Align best-before stamp within frame"
+                        else -> "Align mfg or purchase date within frame"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.LightGray
+                )
+            }
 
-                            // Top Left corners
-                            drawRect(color = color, topLeft = Offset(0f, 0f), size = Size(cornerLength, strokeWidth))
-                            drawRect(color = color, topLeft = Offset(0f, 0f), size = Size(strokeWidth, cornerLength))
-                            // Top Right corners
-                            drawRect(color = color, topLeft = Offset(size.width - cornerLength, 0f), size = Size(cornerLength, strokeWidth))
-                            drawRect(color = color, topLeft = Offset(size.width - strokeWidth, 0f), size = Size(strokeWidth, cornerLength))
-                            // Bottom Left corners
-                            drawRect(color = color, topLeft = Offset(0f, size.height - strokeWidth), size = Size(cornerLength, strokeWidth))
-                            drawRect(color = color, topLeft = Offset(0f, size.height - cornerLength), size = Size(strokeWidth, cornerLength))
-                            // Bottom Right corners
-                            drawRect(color = color, topLeft = Offset(size.width - cornerLength, size.height - strokeWidth), size = Size(cornerLength, strokeWidth))
-                            drawRect(color = color, topLeft = Offset(size.width - strokeWidth, size.height - cornerLength), size = Size(strokeWidth, cornerLength))
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.9f)
-                            .height(2.dp)
-                            .background(Color.Red)
-                    )
-                    Text(
-                        "Align best-before stamp within frame",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.LightGray
-                    )
-                }
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        "Tap preset label to simulate camera response",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Button(
-                            onClick = {
-                                onDateDetected(
-                                    LocalDate(2026, 6, 10),
-                                    "Organic Whole Milk 1L",
-                                    Category.DAIRY
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-                        ) {
-                            Text("Milk Scan", style = MaterialTheme.typography.bodySmall, color = Color.White)
-                        }
-                        Button(
-                            onClick = {
-                                onDateDetected(
-                                    LocalDate(2027, 2, 15),
-                                    "Rustic Tomato Basil Soup",
-                                    Category.PANTRY
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
-                        ) {
-                            Text("Soup Can Scan", style = MaterialTheme.typography.bodySmall, color = Color.White)
-                        }
-                    }
-                }
+            // Bottom UI: Dynamic capture info
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 56.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Analyzing camera feed in real-time...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = when (mode) {
+                        "productName" -> "Hold your device steady with good lighting to parse product names"
+                        "expiryDate" -> "Hold your device steady with good lighting to parse expiry dates (preceded by EXP, BB)"
+                        else -> "Hold your device steady with good lighting to parse buy/mfg dates"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
             }
         }
     }
 }
 
-/**
- * Beautiful Material 3 date picker dialog for KMP inputs.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MaterialKmpDatePicker(
