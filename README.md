@@ -1,7 +1,19 @@
 UI:
 
+First Iteration:
+
 
 https://github.com/user-attachments/assets/17713f84-1daa-408c-a5f5-7527af15bbdc
+
+Second Iteration:
+Using OCR kit and ML Kit to identify product names and dates printed on packets to reduce friction while entering the data.
+
+
+https://github.com/user-attachments/assets/1cdaaecf-ccc1-41d7-9ef5-c0a9929ecdee
+
+
+
+
 
 
 
