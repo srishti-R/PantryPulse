@@ -213,11 +213,12 @@ fun AddItemScreen(
                         isRemindEnabled = isGeofenceAlertEnabled
                     )
 
-                    viewModel.addPantryItem(itemToSave, pantryDao)
-                    // Reset fields
-                    productName = ""
-                    expiryDate = null
-                    selectedCategory = Category.NA
+                    viewModel.addPantryItem(itemToSave, pantryDao) {
+                        productName = ""
+                        expiryDate = null
+                        buyDate = null
+                        selectedCategory = Category.NA
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth(),

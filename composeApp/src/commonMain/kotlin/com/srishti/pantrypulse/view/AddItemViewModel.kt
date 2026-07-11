@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 
 class AddItemViewModel: ViewModel() {
 
-    fun addPantryItem(pantryItem: PantryItem, dao: PantryDao) {
+    fun addPantryItem(pantryItem: PantryItem, dao: PantryDao, onComplete:() -> Unit) {
        viewModelScope.launch {
            with(Dispatchers.IO) {
                dao.insertItem(
