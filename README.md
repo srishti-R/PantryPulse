@@ -1,15 +1,24 @@
 UI:
 
-First Iteration:
+Third Iteration:
+Enabled Voice commands for data entry.
 
 
-https://github.com/user-attachments/assets/17713f84-1daa-408c-a5f5-7527af15bbdc
+https://github.com/user-attachments/assets/54efb597-dc5f-4040-87ad-6b13553d962c
+
 
 Second Iteration:
 Using OCR kit and ML Kit to identify product names and dates printed on packets to reduce friction while entering the data.
 
 
 https://github.com/user-attachments/assets/1cdaaecf-ccc1-41d7-9ef5-c0a9929ecdee
+
+First Iteration:
+
+
+https://github.com/user-attachments/assets/17713f84-1daa-408c-a5f5-7527af15bbdc
+
+
 
 
 
