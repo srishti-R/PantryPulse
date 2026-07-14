@@ -223,8 +223,7 @@ actual fun VoiceCommandOverlay(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "Microphone",
                             tint = if (isProcessing) Color(0xFF00A884) else Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier
-                                .size(36.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
