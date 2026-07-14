@@ -1,4 +1,4 @@
-import android.Manifest
+
 import android.app.Activity
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
@@ -18,7 +18,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 @Composable
-fun CameraPermissionGate(content: @Composable () -> Unit) {
+fun PermissionGate(permission: String, content: @Composable () -> Unit) {
     val context = LocalContext.current
     // Safely resolve an Activity from the current Context (may be a ContextThemeWrapper in previews)
     val activity: Activity? = remember(context) {
@@ -36,7 +36,7 @@ fun CameraPermissionGate(content: @Composable () -> Unit) {
     }
     var hasPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         )
     }
 
@@ -44,7 +44,7 @@ fun CameraPermissionGate(content: @Composable () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted) {
-            showRationale = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA) } ?: false
+            showRationale = activity?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, permission) } ?: false
         } else {
             hasPermission = true
         }
@@ -60,7 +60,7 @@ fun CameraPermissionGate(content: @Composable () -> Unit) {
                 title = { Text("Camera Access") },
                 text = { Text("We need the camera to scan expiry dates so you don't have to type them manually!") },
                 confirmButton = {
-                    Button(onClick = { launcher.launch(Manifest.permission.CAMERA) }) {
+                    Button(onClick = { launcher.launch(permission) }) {
                         Text("Try Again")
                     }
                 }
@@ -68,7 +68,7 @@ fun CameraPermissionGate(content: @Composable () -> Unit) {
         } else {
             // First time or permanently denied
             LaunchedEffect(Unit) {
-                launcher.launch(Manifest.permission.CAMERA)
+                launcher.launch(permission)
             }
         }
     }

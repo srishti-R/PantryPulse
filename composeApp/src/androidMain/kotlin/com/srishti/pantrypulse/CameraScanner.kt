@@ -1,7 +1,8 @@
 package com.srishti.pantrypulse
 
-import CameraPermissionGate
 import Category
+import PermissionGate
+import android.Manifest
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -31,7 +32,7 @@ actual fun CameraScanner(
     modifier: Modifier,
     mode: String
 ) {
-    CameraPermissionGate {
+    PermissionGate(Manifest.permission.CAMERA) {
         val context = LocalContext.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
