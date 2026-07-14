@@ -1,4 +1,12 @@
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +16,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,12 +24,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
@@ -55,6 +64,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.srishti.pantrypulse.CameraScanner
 import com.srishti.pantrypulse.Utilities
+import com.srishti.pantrypulse.VoiceCommandOverlay
 import com.srishti.pantrypulse.db.PantryItem
 import com.srishti.pantrypulse.view.AddItemViewModel
 import kotlinx.datetime.DatePeriod
@@ -87,6 +97,9 @@ fun AddItemScreen(
     // Geofencing refilling state
     var isGeofenceAlertEnabled by remember { mutableStateOf(true) }
 
+    var activeVoiceField by remember { mutableStateOf<String?>(null) }
+    var showVoiceOverlay by remember { mutableStateOf(false) }
+
     // Platform date picker dialog
     MaterialKmpDatePicker(
         show = showPicker,
@@ -111,14 +124,29 @@ fun AddItemScreen(
             placeholder = { Text("Enter milk, cereal, fruit...") },
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
-                IconButton(onClick = {
-                    scannerMode = "productName"
-                    showScanner = true
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.DocumentScanner,
-                        contentDescription = "Scan with Camera"
-                    )
+                Row(
+                    modifier = Modifier.padding(end = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        activeVoiceField = "productName"
+                        showVoiceOverlay = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Voice Input"
+                        )
+                    }
+                    IconButton(onClick = {
+                        scannerMode = "productName"
+                        showScanner = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Camera,
+                            contentDescription = "Scan with Camera"
+                        )
+                    }
                 }
             }
         )
@@ -151,9 +179,9 @@ fun AddItemScreen(
                 scannerMode = "expiryDate"
                 showScanner = true
             },
-            onVoiceTranscribed = { _, targetDate, _ ->
-                // Smart voice callback: isolate change to expiry date specifically
-                expiryDate = targetDate
+            onMicClick = {
+                activeVoiceField = "expiryDate"
+                showVoiceOverlay = true
             }
         )
 
@@ -165,12 +193,13 @@ fun AddItemScreen(
                 pickingForExpiry = false
                 showPicker = true
             },
+            onMicClick = {
+                activeVoiceField = "buyDate"
+                showVoiceOverlay = true
+            },
             onCameraClick = {
                 scannerMode = "buyDate"
                 showScanner = true
-            },
-            onVoiceTranscribed = { transcribedProduct, targetDate, _ ->
-                buyDate = targetDate
             }
         )
 
@@ -249,6 +278,32 @@ fun AddItemScreen(
             onClose = { showScanner = false }
         )
     }
+
+    if (showVoiceOverlay && activeVoiceField != null) {
+        VoiceCommandOverlay(
+            mode = activeVoiceField ?: "",
+            onProductNameParsed = { name ->
+                if (activeVoiceField == "productName") {
+                    productName = name
+                }
+                showVoiceOverlay = false
+                activeVoiceField = null
+            },
+            onDateParsed = { detectedDate ->
+                if (activeVoiceField == "expiryDate") {
+                    expiryDate = detectedDate
+                } else if (activeVoiceField == "buyDate") {
+                    buyDate = detectedDate
+                }
+                showVoiceOverlay = false
+                activeVoiceField = null
+            },
+            onClose = {
+                showVoiceOverlay = false
+                activeVoiceField = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -257,7 +312,7 @@ fun DateField(
     date: LocalDate?,
     onClick: () -> Unit,
     onCameraClick: () -> Unit,
-    onVoiceTranscribed: (String, LocalDate, Category?) -> Unit
+    onMicClick: () -> Unit,
 ) {
     OutlinedTextField(
         value = date?.formatToDeviceLocale() ?: "",
@@ -269,12 +324,7 @@ fun DateField(
         readOnly = true,
         trailingIcon = {
             DateFieldTrailingIcons(
-                onMicClick = {
-                    // Trigger native platform-specific speech command listener (SpeechToText)
-                    // Synthesized callback simulated in multiplatform helper:
-                    val today = LocalDate(2026, 5, 31)
-                    onVoiceTranscribed("Greek Yogurt", today, Category.DAIRY)
-                },
+                onMicClick = { onMicClick() },
                 onCalendarClick = { onClick() },
                 onCameraClick = { onCameraClick() }
             )
@@ -463,5 +513,86 @@ fun MaterialKmpDatePicker(
         }
     ) {
         DatePicker(state = datePickerState)
+    }
+}
+
+@Composable
+fun VoiceWaveform(isProcessing: Boolean, volumeIntensity: Float = 0f) {
+    val animatedIntensity by animateFloatAsState(
+        targetValue = if (isProcessing) {
+            if (volumeIntensity > 0f) volumeIntensity.coerceIn(0f, 1f) else 1f
+        } else {
+            0f
+        },
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)
+    )
+
+    val infiniteTransition = rememberInfiniteTransition()
+    @Composable
+    fun animateFallback(duration: Int, delay: Int): Float {
+        val value by if (isProcessing && volumeIntensity == 0f) {
+            infiniteTransition.animateFloat(
+                initialValue = 0.15f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = duration, delayMillis = delay),
+                    repeatMode = RepeatMode.Reverse
+                )
+            )
+        } else {
+            remember { mutableStateOf(0.15f) }
+        }
+        return value
+    }
+
+    val baseMultipliers = listOf(0.15f, 0.35f, 0.6f, 0.85f, 0.7f, 0.5f, 0.8f, 1.0f, 0.75f, 0.55f, 0.4f, 0.25f, 0.1f)
+    val fallbackHeights = listOf(
+        animateFallback(450, 50),
+        animateFallback(600, 150),
+        animateFallback(500, 100),
+        animateFallback(700, 0),
+        animateFallback(400, 200),
+        animateFallback(550, 80),
+        animateFallback(650, 120),
+        animateFallback(480, 60),
+        animateFallback(580, 180),
+        animateFallback(420, 110),
+        animateFallback(610, 140),
+        animateFallback(520, 90),
+        animateFallback(680, 40)
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        baseMultipliers.forEachIndexed { index, multiplier ->
+            val scale = if (isProcessing) {
+                if (volumeIntensity > 0f) {
+                    // Drive heights dynamically by the real-time audio volume!
+                    0.15f + (multiplier * animatedIntensity * 0.85f)
+                } else {
+                    // Smooth organic fallback wave
+                    fallbackHeights[index]
+                }
+            } else {
+                0.15f
+            }
+
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 3.dp)
+                    .width(4.dp)
+                    .fillMaxHeight(scale)
+                    .background(
+                        color = if (isProcessing) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+            )
+        }
     }
 }
